@@ -1,32 +1,69 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"sync/atomic"
 )
 
-var backendPool = []string{"http://localhost:8081", "http://localhost:8082", "http://localhost:8083"}
+type Backend struct {
+	URL   *url.URL
+	Alive bool
+}
 
-var counter uint32
+type LoadBalancer struct {
+	Backends []*Backend
+	current  int
+}
 
-func getNextServer() string {
-	i := atomic.AddUint32(&counter, 1)
-	return backendPool[(int(i)-1)%(len(backendPool))]
+func mustParse(rawURL string) *url.URL {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		log.Fatalf("Invalid URL %s: %v", rawURL, err)
+	}
+	return parsed
+}
+
+func (lb *LoadBalancer) getNextServer() *Backend {
+	total := len(lb.Backends)
+	for i := 0; i < total; i++ {
+		idx := (lb.current + i) % total
+		backend := lb.Backends[idx]
+
+		if backend.Alive {
+			lb.current = (idx + 1) % total
+			return backend
+		}
+	}
+
+	// If none are alive, return nil
+	return nil
+}
+
+func (lb *LoadBalancer) ServeHTTPCustom(w http.ResponseWriter, r *http.Request) {
+	backend := lb.getNextServer()
+	if backend == nil {
+		http.Error(w, "No backend available", http.StatusServiceUnavailable)
+		return
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(backend.URL)
+	proxy.ServeHTTP(w, r)
 }
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		target := getNextServer()
-		backendUrl, _ := url.Parse(target)
-		log.Println("Backend URL:", backendUrl)
-		proxy := httputil.NewSingleHostReverseProxy(backendUrl)
-		proxy.ServeHTTP(w, r)
-	})
+	backends := []*Backend{
+		{URL: mustParse("http://localhost:8081"), Alive: true},
+		{URL: mustParse("http://localhost:8082"), Alive: false},
+		{URL: mustParse("http://localhost:8083"), Alive: true},
+	}
 
-	log.Println("Load balancer on port 8080")
+	lb := &LoadBalancer{Backends: backends}
+	fmt.Print(lb)
+	http.HandleFunc("/", lb.ServeHTTPCustom)
+
+	log.Println("Load balancer running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
-
 }
