@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sync/atomic"
 )
 
 type Backend struct {
@@ -15,7 +16,7 @@ type Backend struct {
 
 type LoadBalancer struct {
 	Backends []*Backend
-	current  int
+	current  uint64
 }
 
 func mustParse(rawURL string) *url.URL {
@@ -27,19 +28,9 @@ func mustParse(rawURL string) *url.URL {
 }
 
 func (lb *LoadBalancer) getNextServer() *Backend {
-	total := len(lb.Backends)
-	for i := 0; i < total; i++ {
-		idx := (lb.current + i) % total
-		backend := lb.Backends[idx]
-
-		if backend.Alive {
-			lb.current = (idx + 1) % total
-			return backend
-		}
-	}
-
-	// If none are alive, return nil
-	return nil
+	i := atomic.AddUint64(&lb.current, 1)
+	backend := lb.Backends[i%uint64(len(lb.Backends))]
+	return backend
 }
 
 func (lb *LoadBalancer) ServeHTTPCustom(w http.ResponseWriter, r *http.Request) {
