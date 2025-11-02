@@ -19,10 +19,10 @@ A simple yet powerful **HTTP Load Balancer** written in Go — built as a learni
 go-loadbalancer/
 ├── loadbalancer/
 │   ├── main.go               # Main load balancer entry point
+├── commmon/
 │   ├── healthchecker.go      # Backend health monitoring
-│   ├── config.yaml           # YAML configuration for backends
-│   ├── config.go             # Reads YAML and loads config
-│   └── metrics.go            # Tracks requests and status
+├── backend                  
+│   |── main.go               # Entry point to run the servers
 └── README.md
 ```
 ---
