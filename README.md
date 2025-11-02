@@ -6,9 +6,9 @@ A simple yet powerful **HTTP Load Balancer** written in Go — built as a learni
 
 ## 🚀 Features
 
-✅ **Round Robin Load Balancing** — distributes incoming traffic evenly across multiple backend servers.
-✅ **Health Checks** — periodically checks backend `/health` endpoints and updates status automatically.
-✅ **Metrics & Dashboard** — exposes `/status` endpoint with backend health and request count data.
+✅ **Round Robin Load Balancing** — distributes incoming traffic evenly across multiple backend servers.\
+✅ **Health Checks** — periodically checks backend `/health` endpoints and updates status automatically.\
+✅ **Metrics & Dashboard** — exposes `/status` endpoint with backend health and request count data.\
 ✅ **Concurrent Safe** — uses `sync/atomic` for efficient counter and state management.
 
 ---
@@ -41,7 +41,10 @@ go-loadbalancer/
 
 ### 1️⃣ Start 3 Simple Backends
 
-You can spin up dummy servers for testing
+```bash
+cd backend
+go run main.go
+```
 
 ### 2️⃣ Start Load Balancer
 
